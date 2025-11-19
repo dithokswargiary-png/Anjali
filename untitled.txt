@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Surprise Birthday Book</title>
+<style>
+  :root{
+    --paper-w: 320px;
+    --paper-h: 420px;
+    --bg: linear-gradient(180deg,#f7f4ef 0%, #fffefc 100%);
+    --paper-edge: #e8e2d8;
+  }
+
+  html,body{
+    height:100%;
+    margin:0;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background:#f0e6f8;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .stage{
+    perspective: 1400px;
+    width: calc(var(--paper-w) * 1.6);
+    height: var(--paper-h);
+    position:relative;
+    user-select:none;
+  }
+
+  /* stack of pages */
+  .book{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform: translate(-50%,-50%);
+    width: calc(var(--paper-w) * 1.2);
+    height: var(--paper-h);
+    transform-style: preserve-3d;
+  }
+
+  .page{
+    --offset: 0px;
+    position:absolute;
+    width: var(--paper-w);
+    height: var(--paper-h);
+    left:0;
+    top:0;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    border-radius: 6px;
+    transition: transform 0.9s cubic-bezier(.2,.9,.36,1), z-index 0s;
+    background: var(--bg);
+    overflow:hidden;
+  }
+
+  /* slight layering so pages look stacked */
+  .page[data-index="0"]{ left: calc(var(--paper-w) * 0.2); z-index: 50; }
+  .page[data-index="1"]{ left: calc(var(--paper-w) * 0.1); z-index: 40; }
+  .page[data-index="2"]{ left: 0px; z-index: 30; }
+  .page[data-index="3"]{ left: 0px; z-index: 20; }
+
+  /* the flipped state rotates page to reveal what's under it */
+  .page.flipped{
+    transform: rotateY(-180deg);
+    z-index: 5 !important;
+  }
+
+  /* front and back faces */
+  .face{
+    position:absolute;
+    inset:0;
+    backface-visibility: hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    box-sizing:border-box;
+  }
+  .front{
+    /* visible initially */
+  }
+  .back{
+    transform: rotateY(180deg);
+  }
+
+  /* paper look for edges */
+  .page::after{
+    content:"";
+    position:absolute;
+    right:-12px;
+    top:0;
+    width:12px;
+    height:100%;
+    background: linear-gradient(90deg, rgba(0,0,0,0.06), rgba(255,255,255,0.07));
+    border-top-right-radius:6px;
+    border-bottom-right-radius:6px;
+    pointer-events:none;
+  }
+
+  /* text and simple styling */
+  h1{ margin:0; font-size:22px; color:#6b1553; letter-spacing:0.4px; }
+  p{ margin:6px 0 0; color:#333; text-align:center; line-height:1.4; }
+
+  .controls{
+    position:absolute;
+    right:-170px;
+    top:50%;
+    transform:translateY(-50%);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  button{
+    padding:10px 14px;
+    border-radius:8px;
+    border:none;
+    cursor:pointer;
+    font-weight:600;
+    background:#6b1553;
+    color:white;
+  }
+
+  /* small decoration */
+  .gift{
+    width:80px;height:80px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    background: linear-gradient(135deg,#ffd6ea,#ffb3d1);
+    box-shadow: inset 0 -6px 10px rgba(255,255,255,0.2);
+    font-size:26px;color:#7a0f4b;
+  }
+
+  /* Responsive shrink */
+  @media (max-width:420px){
+    :root{ --paper-w: 260px; --paper-h: 350px; }
+    .controls{ right:-150px; }
+  }
+</style>
+</head>
+<body>
+  <div class="stage" aria-label="Birthday surprise book">
+    <div class="book" id="book">
+
+      <!-- Page 1: Cover -->
+      <div class="page" data-index="0" id="page-0" role="article" aria-label="Cover page">
+        <div class="face front">
+          <div style="text-align:center;">
+            <div class="gift">🎁</div>
+            <h1>Open Me</h1>
+            <p>Tap Next to turn the page</p>
+          </div>
+        </div>
+        <div class="face back">
+          <div style="text-align:center;">
+            <h1>Happy Surprise!</h1>
+            <p>Keep turning...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page 2 -->
+      <div class="page" data-index="1" id="page-1" role="article" aria-label="Second page">
+        <div class="face front">
+          <div>
+            <h1>Dear Friend,</h1>
+            <p>A little note inside...</p>
+          </div>
+        </div>
+        <div class="face back">
+          <div>
+            <h1>Almost There</h1>
+            <p>One more page to go</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page 3: Message page (will be spoken) -->
+      <div class="page" data-index="2" id="page-2" role="article" aria-label="Message page">
+        <div class="face front">
+          <div>
+            <h1>Open the surprise!</h1>
+            <p>Click Next to reveal the message.</p>
+          </div>
+        </div>
+        <div class="face back" id="message-face">
+          <div style="flex-direction:column;display:flex;align-items:center;justify-content:center;">
+            <h1>Hello dear</h1>
+            <p>Your birthday is coming 🎉</p>
+            <p style="margin-top:10px;font-size:13px;color:#7a3b5a;">Wish them lots of love!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page 4: Closing -->
+      <div class="page" data-index="3" id="page-3" role="article" aria-label="Closing page">
+        <div class="face front">
+          <div>
+            <h1>With love</h1>
+            <p>- From someone special</p>
+          </div>
+        </div>
+        <div class="face back">
+          <div>
+            <h1>🎂</h1>
+            <p>Make their day memorable!</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Controls -->
+    <div class="controls" aria-hidden="false">
+      <button id="prevBtn" disabled>Previous</button>
+      <button id="nextBtn">Next</button>
+      <button id="voiceToggle">🔊 Voice: ON</button>
+    </div>
+  </div>
+
+<script>
+  // Simple page flip controller
+  const pages = Array.from(document.querySelectorAll('.page'));
+  let current = -1; // how many pages are flipped (starts -1 so first Next flips page 0)
+  const nextBtn = document.getElementById('nextBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const voiceToggle = document.getElementById('voiceToggle');
+  let voiceOn = true;
+
+  function updateButtons(){
+    prevBtn.disabled = current < 0;
+    nextBtn.disabled = current >= pages.length - 1;
+  }
+
+  nextBtn.addEventListener('click', () => {
+    if (current < pages.length - 1){
+      current++;
+      flipPage(current);
+      updateButtons();
+    }
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if (current >= 0){
+      unflipPage(current);
+      current--;
+      updateButtons();
+    }
+  });
+
+  voiceToggle.addEventListener('click', ()=>{
+    voiceOn = !voiceOn;
+    voiceToggle.textContent = voiceOn ? '🔊 Voice: ON' : '🔇 Voice: OFF';
+  });
+
+  function flipPage(index){
+    const p = pages[index];
+    if (!p) return;
+    p.classList.add('flipped');
+    // after the page finishes flipping (matching transition duration), do actions
+    setTimeout(()=> {
+      // If the flipped page's back face is the message page, speak
+      // Our message is on page with id page-2 back face
+      if (p.id === 'page-2' && voiceOn){
+        speakMessage("Hello dear. Your birthday is coming.");
+      }
+    }, 300); // small delay to feel responsive (CSS transition is 900ms)
+  }
+
+  function unflipPage(index){
+    const p = pages[index];
+    if (!p) return;
+    p.classList.remove('flipped');
+  }
+
+  // Web Speech API speak
+  function speakMessage(text){
+    if (!('speechSynthesis' in window)) return;
+    // cancel any previous
+    window.speechSynthesis.cancel();
+    const ut = new SpeechSynthesisUtterance(text);
+    // pick a pleasant voice (try to find a local/en voice)
+    const voices = window.speechSynthesis.getVoices();
+    // choose the first English voice if possible
+    ut.voice = voices.find(v => v.lang.startsWith('en')) || voices[0] || null;
+    ut.rate = 0.95;
+    ut.pitch = 1;
+    window.speechSynthesis.speak(ut);
+  }
+
+  // Optional: let clicking a page flip it too (makes interactive)
+  pages.forEach((pg, i) => {
+    pg.addEventListener('click', (e) => {
+      // only allow flipping forward by clicking the topmost unflipped page
+      const topUnflipped = current + 1;
+      if (i === topUnflipped){
+        nextBtn.click();
+      } else if (i <= current){
+        // clicking an already flipped page will unflip down to that page
+        // e.g., if you click page index 0 when current=2, unflip pages 2 and 1
+        while (current >= i){
+          prevBtn.click();
+        }
+      }
+    });
+  });
+
+  // initialize
+  updateButtons();
+
+  // Preload voices (some browsers require a delay)
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = ()=>{ /* noop, just ensure they load */ };
+  }
+
+  // Accessibility: keyboard controls (Left/Right)
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'ArrowRight') nextBtn.click();
+    if (e.key === 'ArrowLeft') prevBtn.click();
+  });
+</script>
+</body>
+</html>
